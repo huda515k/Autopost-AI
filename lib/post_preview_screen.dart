@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'instagram_service.dart';
@@ -60,10 +61,27 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
     });
 
     try {
-      // When the auto-post backend is configured, publish directly via the
-      // unified API (works on every OS, incl. desktop). Otherwise — or if the
-      // backend call fails — fall back to the OS share sheet.
-      if (SocialPostService.isConfigured) {
+      final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+      if (isMobile) {
+        // MOBILE (Android / iOS): hand the image + caption to the installed
+        // app via the share sheet; the user pastes the caption and posts.
+        await _shareViaSheet(platform, imageFile);
+      } else {
+        // DESKTOP (macOS / Windows / Linux): publish automatically through the
+        // backend API — there's no installed app to share to on a laptop.
+        if (!SocialPostService.isConfigured) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Auto-posting needs the backend running. Start server/ and launch with --dart-define=BACKEND_URL=...'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
         final result = await SocialPostService.autoPost(
           platforms: [platform],
           caption: _buildShareCaption(),
@@ -80,15 +98,11 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  'Auto-post failed: ${result.message}. Opening share instead…'),
-              backgroundColor: Colors.orange,
+              content: Text('Couldn\'t post to ${platform.displayName}: ${result.message}'),
+              backgroundColor: Colors.red,
             ),
           );
-          await _shareViaSheet(platform, imageFile);
         }
-      } else {
-        await _shareViaSheet(platform, imageFile);
       }
     } on InstagramNotInstalledException catch (e) {
       if (!mounted) return;
