@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'theme/app_theme.dart';
 import 'auth_screen.dart';
 import 'models/user_model.dart';
 import 'models/social_media_links.dart';
 import 'services/user_storage_service.dart';
 import 'services/social_media_service.dart';
+import 'services/social_post_service.dart';
 import 'services/theme_service.dart';
 import 'screens/help_support_screen.dart';
 import 'screens/privacy_settings_screen.dart';
@@ -179,6 +181,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? 'Social media links updated successfully!'
               : 'Failed to update social media links'),
           backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Opens the account-linking page so the user can connect their socials
+  /// for one-tap auto-posting.
+  Future<void> _connectAccounts() async {
+    if (!SocialPostService.isConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Auto-post backend not set. Build with --dart-define=BACKEND_URL=... to enable account linking.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final url = await SocialPostService.connectUrl();
+    if (!mounted) return;
+    if (url == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not get the account-linking link. Check the backend.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open $url'),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -630,6 +672,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onChanged: (_) => _toggleTheme(),
               activeTrackColor: const Color(0xFF572D74),
             ),
+          ),
+          const Divider(height: 1),
+          _buildSettingTile(
+            icon: Icons.link,
+            title: 'Connect Social Accounts',
+            subtitle: 'Link X, Instagram, Facebook & LinkedIn for auto-posting',
+            onTap: _connectAccounts,
           ),
           const Divider(height: 1),
           _buildSettingTile(
