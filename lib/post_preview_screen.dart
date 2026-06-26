@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'instagram_service.dart';
 import 'schedule_screen.dart';
+import 'services/social_post_service.dart';
 import 'widgets/full_screen_image_viewer.dart';
 
 class PostPreviewScreen extends StatefulWidget {
@@ -37,63 +38,7 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
     return '${widget.caption}$tagText'.trim();
   }
 
-  Future<void> _postToInstagram() async {
-    if (_isPostingToInstagram) return;
-
-    final imageFile = widget.imageFile;
-    if (imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please generate or add an image first.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isPostingToInstagram = true;
-    });
-
-    try {
-      await InstagramService.shareImageToInstagram(
-        imageFile: imageFile,
-        caption: _buildShareCaption(),
-      );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Caption copied. Paste it in Instagram.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } on InstagramNotInstalledException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
-    } on InstagramShareException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to open Instagram: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPostingToInstagram = false;
-        });
-      }
-    }
-  }
+  Future<void> _postToInstagram() => _shareToPlatform(SocialPlatform.instagram);
 
   Future<void> _shareToPlatform(SocialPlatform platform) async {
     if (_isPostingToInstagram) return;
@@ -115,19 +60,36 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
     });
 
     try {
-      await InstagramService.shareImageToPlatform(
-        platform: platform,
-        imageFile: imageFile,
-        caption: _buildShareCaption(),
-      );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Caption copied. Paste it in ${platform.displayName}.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // When the auto-post backend is configured, publish directly via the
+      // unified API (works on every OS, incl. desktop). Otherwise — or if the
+      // backend call fails — fall back to the OS share sheet.
+      if (SocialPostService.isConfigured) {
+        final result = await SocialPostService.autoPost(
+          platforms: [platform],
+          caption: _buildShareCaption(),
+          imageFile: imageFile,
+        );
+        if (!mounted) return;
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Posted to ${platform.displayName} ✅'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Auto-post failed: ${result.message}. Opening share instead…'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          await _shareViaSheet(platform, imageFile);
+        }
+      } else {
+        await _shareViaSheet(platform, imageFile);
+      }
     } on InstagramNotInstalledException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -142,7 +104,7 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to open ${platform.displayName}: $e'),
+          content: Text('Failed to post to ${platform.displayName}: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -154,6 +116,22 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
         });
       }
     }
+  }
+
+  /// Hands the image + caption to the OS share sheet / native app.
+  Future<void> _shareViaSheet(SocialPlatform platform, File imageFile) async {
+    await InstagramService.shareImageToPlatform(
+      platform: platform,
+      imageFile: imageFile,
+      caption: _buildShareCaption(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Caption copied. Paste it in ${platform.displayName}.'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Widget _buildPlatformButton({
