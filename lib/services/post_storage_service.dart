@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/scheduled_post.dart';
 import '../models/post.dart';
+import 'app_events.dart';
 import 'database_helper.dart';
 import 'post_service.dart';
 import 'user_storage_service.dart';
@@ -136,6 +137,30 @@ class PostStorageService {
       }
     } catch (e) {
       debugPrint('❌ Error marking post as published: $e');
+    }
+  }
+
+  /// Publishes any scheduled posts whose time has arrived to the AutoPost AI
+  /// feed. Call on app start (and periodically) so due posts go live.
+  static Future<void> publishDueScheduledPosts() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final nowIso = DateTime.now().toIso8601String();
+      final due = await db.query(
+        'scheduled_posts',
+        where: 'is_published = 0 AND scheduled_date <= ?',
+        whereArgs: [nowIso],
+      );
+
+      if (due.isEmpty) return;
+
+      for (final row in due) {
+        await markAsPublished(row['id'] as String);
+      }
+      debugPrint('✅ Published ${due.length} due scheduled post(s) to feed');
+      AppEvents.instance.notifyDataChanged();
+    } catch (e) {
+      debugPrint('❌ Error publishing due scheduled posts: $e');
     }
   }
 

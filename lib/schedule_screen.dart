@@ -62,11 +62,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _schedulePost() async {
-    setState(() {
-      _isPosting = true;
-    });
-
-    // Combine date and time
+    // Combine date and time into the target slot.
     final scheduledDateTime = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -75,7 +71,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _selectedTime.minute,
     );
 
-    // Create scheduled post
+    // Must be in the future.
+    if (!scheduledDateTime.isAfter(DateTime.now())) {
+      _showSnack('Pick a future date and time to schedule.', Colors.red);
+      return;
+    }
+
+    setState(() {
+      _isPosting = true;
+    });
+
+    // Schedule to the AutoPost AI in-app feed. The post is saved locally and
+    // published to the feed automatically once its time arrives (on app open /
+    // periodic check). External-platform scheduling needs a paid plan, so it's
+    // intentionally not offered here.
     final post = ScheduledPost(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       imageFile: widget.imageFile,
@@ -84,27 +93,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       scheduledDate: scheduledDateTime,
       contentType: widget.contentType,
     );
-
-    // Save to storage
     await PostStorageService.saveScheduledPost(post);
-
-    // Simulate scheduling
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 300));
 
     if (mounted) {
       setState(() {
         _isPosting = false;
       });
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Post scheduled successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _showSnack('Scheduled to AutoPost AI', Colors.green);
 
-      // Navigate to scheduled posts list
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -115,6 +113,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       );
     }
+  }
+
+  void _showSnack(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
   void _postNow() async {
@@ -179,8 +184,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       // Show success or error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(saved 
-              ? 'Post published successfully!'
+          content: Text(saved
+              ? 'Posted to AutoPost AI!'
               : 'Failed to save post. Please try again.'),
           backgroundColor: saved ? Colors.green : Colors.red,
         ),
@@ -223,9 +228,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     
                     // Schedule Section
                     _buildScheduleSection(),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Action Buttons
                     _buildActionButtons(),
                   ],
@@ -515,7 +520,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget _buildActionButtons() {
     return Column(
       children: [
-        // Post Now Button
+        // Post to AutoPost AI (in-app feed) Button
         SizedBox(
           width: double.infinity,
           height: 55,
@@ -543,7 +548,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       Icon(Icons.send, color: Colors.white),
                       SizedBox(width: 8),
                       Text(
-                        'Post Now',
+                        'Post to AutoPost AI',
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.white,

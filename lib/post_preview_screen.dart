@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import 'autopost_screen.dart';
+import 'config/api_config.dart';
 import 'instagram_service.dart';
 import 'schedule_screen.dart';
 import 'services/social_post_service.dart';
@@ -37,6 +39,20 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
   String _buildShareCaption() {
     final tagText = widget.tags.isEmpty ? '' : ' ${widget.tags.join(' ')}';
     return '${widget.caption}$tagText'.trim();
+  }
+
+  /// Returns to the home screen, clearing the create-post navigation stack.
+  void _goHome(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AutoPostScreen(
+          apiKey: widget.apiKey ?? ApiConfig.geminiApiKey,
+          imageApiKey: widget.imageApiKey,
+        ),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _postToInstagram() => _shareToPlatform(SocialPlatform.instagram);
@@ -198,6 +214,13 @@ class _PostPreviewScreenState extends State<PostPreviewScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.home_outlined),
+            tooltip: 'Home',
+            onPressed: () => _goHome(context),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

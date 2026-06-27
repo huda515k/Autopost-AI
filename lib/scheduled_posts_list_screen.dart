@@ -151,6 +151,25 @@ class _ScheduledPostsListScreenState extends State<ScheduledPostsListScreen> {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.home_outlined, color: Color(0xFF1A1A1A)),
+            tooltip: 'Home',
+            onPressed: () async {
+              final user = await UserStorageService.getCurrentUser();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AutoPostScreen(
+                    apiKey: ApiConfig.geminiApiKey,
+                    imageApiKey: ApiConfig.imageApiKey,
+                    currentUser: user,
+                  ),
+                ),
+                (route) => false,
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh, color: Color(0xFF1A1A1A)),
             onPressed: _loadPosts,
           ),

@@ -44,10 +44,14 @@ class SocialPostService {
   }
 
   /// Publishes [caption] (+ optional [imageFile]) to the given [platforms].
+  ///
+  /// If [scheduleDate] is given (a future time), the unified API queues the
+  /// post and publishes it server-side at that time — even if the device is off.
   static Future<SocialPostResult> autoPost({
     required List<SocialPlatform> platforms,
     required String caption,
     File? imageFile,
+    DateTime? scheduleDate,
     String? profileKey,
   }) async {
     if (!isConfigured) {
@@ -61,6 +65,8 @@ class SocialPostService {
       final body = <String, dynamic>{
         'caption': caption,
         'platforms': platforms.map(platformKey).toList(),
+        if (scheduleDate != null)
+          'scheduleDate': scheduleDate.toUtc().toIso8601String(),
         if (profileKey != null) 'profileKey': profileKey,
       };
 

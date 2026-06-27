@@ -77,9 +77,31 @@ Then rebuild the app with `--dart-define=BACKEND_URL=https://<your-host>`.
   "platforms": ["twitter", "instagram", "facebook", "linkedin"],
   "imageBase64": "<base64 image, optional>",
   "imageUrl": "<public image url, optional alternative>",
+  "scheduleDate": "<ISO 8601 UTC, optional — Ayrshare publishes at this time>",
   "profileKey": "<multi-user only, optional>"
 }
 ```
+
+When `scheduleDate` is provided (a future UTC time), Ayrshare queues the post
+and publishes it server-side at that time. Note: scheduling is an Ayrshare paid
+feature, so on the free plan the app schedules to the in-app AutoPost AI feed
+instead.
+
+## Optional: direct LinkedIn posting (free, off the Ayrshare quota)
+
+If you set `LINKEDIN_ACCESS_TOKEN` and `LINKEDIN_AUTHOR_URN`, the backend posts
+to LinkedIn via LinkedIn's official API instead of Ayrshare — so LinkedIn posts
+don't count against your 20/month Ayrshare quota.
+
+Setup:
+1. Create an app at https://www.linkedin.com/developers/.
+2. Add the "Share on LinkedIn" / "Sign In with LinkedIn" products.
+3. Authorize with scope `w_member_social` and generate a member access token.
+4. Get your author URN (`urn:li:person:XXXX`) from `GET https://api.linkedin.com/v2/userinfo` (the `sub` field) or `/v2/me`.
+5. Put both in `.env` and restart the backend.
+
+When configured, the app's "Post to LinkedIn" button (desktop) routes through
+this free path automatically; everything else still goes via Ayrshare.
 
 > Endpoint paths follow Ayrshare's current API. If Ayrshare changes a route
 > (e.g. media upload), update the URLs in `index.js`.

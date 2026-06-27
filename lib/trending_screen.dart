@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'config/api_config.dart';
 import 'topic_detail_screen.dart';
 import 'widgets/full_screen_image_viewer.dart';
 
@@ -21,6 +24,7 @@ class _TrendingScreenState extends State<TrendingScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<TrendingTopic> _allTopics = [];
   List<TrendingTopic> _filteredTopics = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -29,72 +33,96 @@ class _TrendingScreenState extends State<TrendingScreen> {
     _searchController.addListener(_filterTopics);
   }
 
+  /// Builds a free, relevant cover image for a topic via Pollinations.
+  String _imageForTopic(String title, int seed) {
+    final q = Uri.encodeComponent('$title, social media, vibrant, modern');
+    return 'https://image.pollinations.ai/prompt/$q?width=780&height=470&nologo=true&seed=$seed';
+  }
+
+  List<TrendingTopic> _fallbackTopics() {
+    final seed = <Map<String, dynamic>>[
+      {'t': 'AI Technology', 'd': 'Latest trends in artificial intelligence', 'h': ['#AI', '#Technology', '#Innovation'], 's': 9.8},
+      {'t': 'Sustainable Fashion', 'd': 'Eco-friendly fashion and sustainable brands', 'h': ['#SustainableFashion', '#EcoFriendly', '#Green'], 's': 9.5},
+      {'t': 'Mental Health', 'd': 'Wellness and mental health awareness', 'h': ['#MentalHealth', '#Wellness', '#Mindfulness'], 's': 9.0},
+      {'t': 'Travel Destinations', 'd': 'Top travel spots and vacation ideas', 'h': ['#Travel', '#Vacation', '#Adventure'], 's': 8.4},
+    ];
+    return [
+      for (var i = 0; i < seed.length; i++)
+        TrendingTopic(
+          title: seed[i]['t'] as String,
+          description: seed[i]['d'] as String,
+          imageUrl: _imageForTopic(seed[i]['t'] as String, i),
+          hashtags: (seed[i]['h'] as List).cast<String>(),
+          trendScore: seed[i]['s'] as double,
+        ),
+    ];
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  void _loadTrendingTopics() {
-    _allTopics = [
-      TrendingTopic(
-        title: 'AI Technology',
-        description: 'Latest trends in artificial intelligence',
-        imageUrl: 'https://vidyaenews.most.gov.lk/wp-content/uploads/2025/01/5-AI-Advancements-to-Expect-in-the-Next-10-Years-scaled-1-780x470.jpeg',
-        hashtags: ['#AI', '#Technology', '#Innovation'],
-        trendScore: 9.8,
-      ),
-      TrendingTopic(
-        title: 'Sustainable Fashion',
-        description: 'Eco-friendly fashion and sustainable brands',
-        imageUrl: 'https://images.ft.com/v3/image/raw/ftcms%3A3dc5a87a-53d4-4f00-a166-6c668fc12909?source=next-article&fit=scale-down&quality=highest&width=1440&dpr=1',
-        hashtags: ['#SustainableFashion', '#EcoFriendly', '#Green'],
-        trendScore: 9.5,
-      ),
-      TrendingTopic(
-        title: 'Remote Work',
-        description: 'Tips and trends for working from home',
-        imageUrl: 'https://gigster.com/wp-content/uploads/2023/09/benefits-of-remote-working.jpg',
-        hashtags: ['#RemoteWork', '#WorkFromHome', '#Productivity'],
-        trendScore: 9.2,
-      ),
-      TrendingTopic(
-        title: 'Mental Health',
-        description: 'Wellness and mental health awareness',
-        imageUrl: 'https://www.planstreet.com/img/blog/what-is-mental-health.webp',
-        hashtags: ['#MentalHealth', '#Wellness', '#Mindfulness'],
-        trendScore: 9.0,
-      ),
-      TrendingTopic(
-        title: 'Cryptocurrency',
-        description: 'Latest news and trends in crypto',
-        imageUrl: 'https://content.kaspersky-labs.com/fm/press-releases/e0/e0c122e63ca4199bb2f758617abad50b/source/cryptocurrencyimage11130490519670x377px300dpi.jpg',
-        hashtags: ['#Crypto', '#Bitcoin', '#Blockchain'],
-        trendScore: 8.8,
-      ),
-      TrendingTopic(
-        title: 'Fitness & Health',
-        description: 'Workout routines and health tips',
-        imageUrl: 'https://img.freepik.com/free-photo/athlete-playing-sport-with-hand-drawn-doodles_23-2150036348.jpg?semt=ais_hybrid&w=740&q=80',
-        hashtags: ['#Fitness', '#Health', '#Workout'],
-        trendScore: 8.5,
-      ),
-      TrendingTopic(
-        title: 'Travel Destinations',
-        description: 'Top travel spots and vacation ideas',
-        imageUrl: 'https://i.dawn.com/primary/2019/06/5d02a993e2dfa.png',
-        hashtags: ['#Travel', '#Vacation', '#Adventure'],
-        trendScore: 8.3,
-      ),
-      TrendingTopic(
-        title: 'Food & Recipes',
-        description: 'Trending recipes and food culture',
-        imageUrl: 'https://www.indiafoodnetwork.in/h-upload/2021/09/28/562120-untitled-design-10.webp',
-        hashtags: ['#Food', '#Recipe', '#Cooking'],
-        trendScore: 8.0,
-      ),
-    ];
-    _filteredTopics = List.from(_allTopics);
+  Future<void> _loadTrendingTopics() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: widget.apiKey ?? ApiConfig.geminiApiKey,
+      );
+      const prompt =
+          'List 8 currently trending social media content topics across diverse '
+          'niches (technology, fashion, wellness, food, travel, business, '
+          'entertainment, fitness). For each, give: "title" (2-4 words), '
+          '"description" (one short sentence), "hashtags" (array of exactly 3, '
+          'each starting with #), and "trendScore" (number between 8.0 and 9.9). '
+          'Return ONLY a JSON array of objects, no markdown, no commentary.';
+
+      final resp = await model.generateContent([Content.text(prompt)]);
+      var text = (resp.text ?? '').trim();
+      // Strip code fences and any leading/trailing prose around the JSON array.
+      text = text.replaceAll(RegExp(r'```json|```'), '').trim();
+      final start = text.indexOf('[');
+      final end = text.lastIndexOf(']');
+      if (start != -1 && end != -1 && end > start) {
+        text = text.substring(start, end + 1);
+      }
+
+      final List<dynamic> data = jsonDecode(text);
+      final topics = <TrendingTopic>[];
+      for (var i = 0; i < data.length; i++) {
+        final t = data[i] as Map<String, dynamic>;
+        final title = (t['title'] ?? '').toString().trim();
+        if (title.isEmpty) continue;
+        final tags = (t['hashtags'] as List?)
+                ?.map((e) => e.toString().startsWith('#') ? e.toString() : '#${e.toString()}')
+                .toList() ??
+            <String>[];
+        final score = (t['trendScore'] is num)
+            ? (t['trendScore'] as num).toDouble()
+            : 8.5;
+        topics.add(TrendingTopic(
+          title: title,
+          description: (t['description'] ?? '').toString().trim(),
+          imageUrl: _imageForTopic(title, i),
+          hashtags: tags,
+          trendScore: score,
+        ));
+      }
+      _allTopics = topics.isNotEmpty ? topics : _fallbackTopics();
+    } catch (e) {
+      debugPrint('Trending generation failed, using fallback: $e');
+      _allTopics = _fallbackTopics();
+    }
+
+    if (mounted) {
+      setState(() {
+        _filteredTopics = List.from(_allTopics);
+        _isLoading = false;
+      });
+    }
   }
 
   void _filterTopics() {
@@ -127,9 +155,20 @@ class _TrendingScreenState extends State<TrendingScreen> {
             
             // Content
             Expanded(
-              child: _filteredTopics.isEmpty
-                  ? _buildEmptyState()
-                  : _buildTrendingList(),
+              child: _isLoading
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: Color(0xFF572D74)),
+                          SizedBox(height: 16),
+                          Text('Finding trending topics...'),
+                        ],
+                      ),
+                    )
+                  : _filteredTopics.isEmpty
+                      ? _buildEmptyState()
+                      : _buildTrendingList(),
             ),
           ],
         ),
@@ -180,6 +219,11 @@ class _TrendingScreenState extends State<TrendingScreen> {
                 color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black,
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF572D74)),
+            tooltip: 'Refresh topics',
+            onPressed: _isLoading ? null : _loadTrendingTopics,
           ),
         ],
       ),

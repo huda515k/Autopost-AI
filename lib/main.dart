@@ -7,6 +7,7 @@ import 'package:autopost_ai/autopost_screen.dart';
 import 'package:autopost_ai/config/api_config.dart';
 import 'package:autopost_ai/models/user_model.dart';
 import 'package:autopost_ai/services/post_migration_service.dart';
+import 'package:autopost_ai/services/post_storage_service.dart';
 import 'package:autopost_ai/services/user_storage_service.dart';
 import 'package:autopost_ai/services/theme_service.dart';
 
@@ -25,6 +26,9 @@ void main() async {
 
   // Migrate published scheduled posts to posts table on app start
   await PostMigrationService.migratePublishedPosts();
+
+  // Publish any scheduled posts whose time has arrived to the AutoPost AI feed.
+  await PostStorageService.publishDueScheduledPosts();
 
   runApp(const MyApp());
 }
