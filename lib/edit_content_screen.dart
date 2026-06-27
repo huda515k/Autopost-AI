@@ -452,7 +452,11 @@ class _EditContentScreenState extends State<EditContentScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _captionController,
-                    maxLines: 5,
+                    // Blog articles get a tall, scrollable field; other types a roomier box.
+                    minLines:
+                        widget.contentType.toLowerCase().contains('blog') ? 12 : 3,
+                    maxLines:
+                        widget.contentType.toLowerCase().contains('blog') ? 20 : 8,
                     decoration: InputDecoration(
                       hintText: 'Enter your caption...',
                       border: OutlineInputBorder(

@@ -11,6 +11,7 @@ import 'screens/notifications_screen.dart';
 import 'services/notification_service.dart';
 import 'services/user_storage_service.dart';
 import 'services/post_service.dart';
+import 'services/post_storage_service.dart';
 import 'services/like_service.dart';
 import 'services/comment_service.dart';
 import 'models/post.dart';
@@ -44,16 +45,23 @@ class _AutoPostScreenState extends State<AutoPostScreen> {
   @override
   void initState() {
     super.initState();
+    _publishDueThenLoad();
     _loadNotificationCount();
-    _loadRecentPosts();
-    _loadStats();
-    // Refresh notification count periodically
+    // Refresh notification count + publish any due scheduled posts periodically
     Future.delayed(const Duration(seconds: 30), () {
       if (mounted) {
         _loadNotificationCount();
-        _loadStats();
+        _publishDueThenLoad();
       }
     });
+  }
+
+  Future<void> _publishDueThenLoad() async {
+    // Publish any scheduled posts whose time has arrived to the feed, then refresh.
+    await PostStorageService.publishDueScheduledPosts();
+    if (!mounted) return;
+    _loadRecentPosts();
+    _loadStats();
   }
 
   Future<void> _loadStats() async {

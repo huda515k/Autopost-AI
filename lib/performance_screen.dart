@@ -27,6 +27,18 @@ class _PerformanceScreenState extends State<PerformanceScreen>
   bool _isLoading = true;
   bool _initialized = false;
 
+  // Selected metrics category. 'autopost' shows real in-app data; the platform
+  // keys map to SocialPlatform values.
+  String _category = 'autopost';
+
+  static const List<Map<String, String>> _categories = [
+    {'key': 'autopost', 'label': 'AutoPost AI'},
+    {'key': 'instagram', 'label': 'Instagram'},
+    {'key': 'twitter', 'label': 'X'},
+    {'key': 'facebook', 'label': 'Facebook'},
+    {'key': 'linkedin', 'label': 'LinkedIn'},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -229,23 +241,32 @@ class _PerformanceScreenState extends State<PerformanceScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Overview Stats
-                    _buildOverviewStats(context),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Chart Section
-                    _buildChartSection(context, screenWidth),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Key Metrics
-                    _buildKeyMetrics(),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Recent Activity
-                    _buildRecentActivity(context),
+                    // Category selector (AutoPost AI + linked platforms)
+                    _buildCategorySelector(context),
+
+                    const SizedBox(height: 24),
+
+                    if (_category == 'autopost') ...[
+                      // Overview Stats
+                      _buildOverviewStats(context),
+
+                      const SizedBox(height: 30),
+
+                      // Chart Section
+                      _buildChartSection(context, screenWidth),
+
+                      const SizedBox(height: 30),
+
+                      // Key Metrics
+                      _buildKeyMetrics(),
+
+                      const SizedBox(height: 30),
+
+                      // Recent Activity
+                      _buildRecentActivity(context),
+                    ] else
+                      // Real platform analytics require a paid plan — shown honestly.
+                      _buildPlatformMetrics(context, _category),
                   ],
                 ),
                 ),
@@ -253,6 +274,93 @@ class _PerformanceScreenState extends State<PerformanceScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCategorySelector(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _categories.map((c) {
+          final selected = _category == c['key'];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(c['label']!),
+              selected: selected,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _category = c['key']!),
+              selectedColor: AppColors.primary,
+              backgroundColor: Theme.of(context).cardColor,
+              labelStyle: TextStyle(
+                color: selected
+                    ? Colors.white
+                    : Theme.of(context).textTheme.bodyLarge?.color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Honest state for social platforms: real engagement metrics require a paid
+  /// analytics plan, so we never show fabricated counts here.
+  Widget _buildPlatformMetrics(BuildContext context, String platformKey) {
+    final label = _categories.firstWhere((c) => c['key'] == platformKey)['label']!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.insights, size: 48, color: AppColors.primary),
+          const SizedBox(height: 16),
+          Text(
+            '$label metrics',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Live likes, comments and shares from $label come from the platform\'s '
+            'analytics API, which is not available on the free plan. Your posts '
+            'still publish to $label — only reading the metrics back is locked.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Real-time metrics — not available on free plan',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -296,6 +404,25 @@ class _PerformanceScreenState extends State<PerformanceScreen>
                 color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black,
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.home_outlined, color: Color(0xFF572D74)),
+            tooltip: 'Home',
+            onPressed: () async {
+              final user = await UserStorageService.getCurrentUser();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AutoPostScreen(
+                    apiKey: ApiConfig.geminiApiKey,
+                    imageApiKey: ApiConfig.imageApiKey,
+                    currentUser: user,
+                  ),
+                ),
+                (route) => false,
+              );
+            },
           ),
           if (widget.apiKey != null)
             IconButton(

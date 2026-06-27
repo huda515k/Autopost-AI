@@ -46,3 +46,6 @@ app.*.map.json
 
 # Local API keys (never commit)
 lib/config/api_config.dart
+
+# Local Claude Code settings
+.claude/settings.local.json

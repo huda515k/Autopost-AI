@@ -72,7 +72,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
         switch (widget.contentType!) {
           case ContentType.blogArticle:
             prompt =
-                "Analyze this image and generate a compelling blog article caption with 5-7 relevant hashtags that would make readers want to read the article. The image appears to be related to: $originalPrompt";
+                "Write a complete, well-structured blog article inspired by this image. "
+                "Include a catchy title, an engaging introduction, 3-5 body sections with clear subheadings, "
+                "and a conclusion, in a clear and engaging tone (roughly 500-800 words). "
+                "The image relates to: $originalPrompt. End with 5-7 relevant hashtags.";
             break;
           case ContentType.instagramPost:
             prompt =
@@ -108,7 +111,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
             break;
           case ContentType.blogArticle:
             prompt =
-                "Generate a compelling blog article caption and 5-7 relevant hashtags that would make readers want to read an article about: $originalPrompt. Focus on the main message and appeal.";
+                "Write a complete, well-structured blog article about: $originalPrompt. "
+                "Include a catchy title, an engaging introduction, 3-5 body sections with clear subheadings, "
+                "and a conclusion. Aim for roughly 500-800 words in a clear, engaging tone. "
+                "End with 5-7 relevant hashtags.";
             break;
           case ContentType.instagramPost:
             prompt =
@@ -368,6 +374,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           lowerResponse.contains("caption") ||
           lowerResponse.contains("hashtag") ||
           lowerResponse.contains("social media") ||
+          widget.contentType != null ||
           image != null) {
         // Small delay to ensure UI is updated
         await Future.delayed(const Duration(milliseconds: 500));
@@ -535,7 +542,20 @@ ${hashtags.join(' ')}
     String caption = '';
     List<String> tags = [];
 
-    try {
+    // Blog articles keep the FULL structured article as the body; only the
+    // hashtags are pulled out as tags. The short-caption extractor below would
+    // truncate a multi-section article at the first heading, so skip it here.
+    if (widget.contentType == ContentType.blogArticle) {
+      final hashtags = RegExp(r'#[\w]+')
+          .allMatches(aiResponse)
+          .map((m) => m.group(0)!)
+          .toList();
+      // Remove only a trailing block of hashtags from the article body.
+      caption = aiResponse.replaceAll(RegExp(r'(\s*#[\w]+)+\s*$'), '').trim();
+      if (caption.isEmpty) caption = aiResponse.trim();
+      tags = hashtags;
+    } else {
+      try {
       debugPrint(
         '📝 Extracting caption from: ${aiResponse.substring(0, aiResponse.length > 200 ? 200 : aiResponse.length)}',
       );
@@ -776,6 +796,7 @@ ${hashtags.join(' ')}
         caption = aiResponse.split('\n').first.trim();
       }
       tags = ['#ai', '#autopost'];
+      }
     }
 
     // Find the image from messages or use the one passed
