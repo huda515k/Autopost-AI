@@ -52,6 +52,14 @@ function requireApiKey(res) {
   return true;
 }
 
+app.get('/', (_req, res) => {
+  res.json({
+    service: 'AutoPost AI backend',
+    status: 'running',
+    endpoints: ['/health', '/api/post', '/api/connect'],
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, configured: Boolean(API_KEY) });
 });
