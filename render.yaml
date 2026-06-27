@@ -1,0 +1,22 @@
+# Render Blueprint for the AutoPost AI backend.
+# In Render: New > Blueprint > connect this repo. Render reads this file,
+# creates the service, and prompts you for the secret values below.
+services:
+  - type: web
+    name: autopost-ai-backend
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # Render prompts for these (sync: false = not stored in the repo).
+      - key: AYRSHARE_API_KEY
+        sync: false
+      - key: IMGBB_API_KEY
+        sync: false
+      - key: LINKEDIN_ACCESS_TOKEN
+        sync: false
+      - key: LINKEDIN_AUTHOR_URN
+        sync: false
