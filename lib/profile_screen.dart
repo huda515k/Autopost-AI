@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _emailController;
   late TextEditingController _bioController;
   late TextEditingController _instagramController;
+  late TextEditingController _twitterController;
   late TextEditingController _linkedinController;
   late TextEditingController _facebookController;
   bool _isEditing = false;
@@ -48,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController = TextEditingController();
     _bioController = TextEditingController();
     _instagramController = TextEditingController();
+    _twitterController = TextEditingController();
     _linkedinController = TextEditingController();
     _facebookController = TextEditingController();
     _loadUserData();
@@ -63,6 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     _bioController.dispose();
     _instagramController.dispose();
+    _twitterController.dispose();
     _linkedinController.dispose();
     _facebookController.dispose();
     super.dispose();
@@ -107,6 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _socialMediaLinks = links;
           _instagramController.text = links.instagram ?? '';
+          _twitterController.text = links.twitter ?? '';
           _linkedinController.text = links.linkedin ?? '';
           _facebookController.text = links.facebook ?? '';
         });
@@ -150,16 +154,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final existingLinks = _socialMediaLinks;
     final links = SocialMediaLinks(
       username: _currentUser!.username,
-      instagram: _instagramController.text.trim().isEmpty 
-          ? null 
+      instagram: _instagramController.text.trim().isEmpty
+          ? null
           : _instagramController.text.trim(),
-      linkedin: _linkedinController.text.trim().isEmpty 
-          ? null 
+      twitter: _twitterController.text.trim().isEmpty
+          ? null
+          : _twitterController.text.trim(),
+      linkedin: _linkedinController.text.trim().isEmpty
+          ? null
           : _linkedinController.text.trim(),
-      facebook: _facebookController.text.trim().isEmpty 
-          ? null 
+      facebook: _facebookController.text.trim().isEmpty
+          ? null
           : _facebookController.text.trim(),
       instagramPublic: existingLinks?.instagramPublic ?? true,
+      twitterPublic: existingLinks?.twitterPublic ?? true,
       linkedinPublic: existingLinks?.linkedinPublic ?? true,
       facebookPublic: existingLinks?.facebookPublic ?? true,
       updatedAt: DateTime.now(),
@@ -274,11 +282,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Profile Section
                     _buildProfileSection(),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Stats Cards
-                    _buildStatsCards(),
                     
                     const SizedBox(height: 30),
                     
@@ -476,63 +479,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard('4.5K', 'Posts', Icons.article_outlined, AppColors.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard('12.3K', 'Followers', Icons.people_outline, Colors.purple),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard('890', 'Following', Icons.person_add_outlined, Colors.orange),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSocialMediaSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -582,9 +528,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             hint: '@username',
             color: Colors.purple,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
+          // X (Twitter)
+          _buildSocialMediaField(
+            icon: Icons.alternate_email,
+            label: 'X',
+            controller: _twitterController,
+            hint: '@username',
+            color: AppColors.primary,
+          ),
+
+          const SizedBox(height: 12),
+
           // LinkedIn
           _buildSocialMediaField(
             icon: Icons.business,

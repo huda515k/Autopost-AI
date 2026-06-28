@@ -94,7 +94,6 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
 
     setState(() {
       _isLoading = true;
@@ -124,35 +123,25 @@ class _AuthScreenState extends State<AuthScreen> {
       });
 
       if (success || authenticatedUser != null) {
-        final userToOpen = success
-            ? await UserStorageService.loginUser(username, password) ?? newUser
-            : authenticatedUser ?? newUser;
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
               success
-                  ? 'Account created successfully! Please login.'
-                  : 'Account already exists on this browser. Signing you in now.',
+                  ? 'Account created successfully! Please log in.'
+                  : 'Account already exists. Please log in.',
             ),
             backgroundColor: Colors.green,
           ),
         );
+        // Registration complete — switch to the login screen. The user must log
+        // in to enter the app. Username is kept prefilled for convenience.
         setState(() {
           _isLogin = true;
-          _usernameController.clear();
           _passwordController.clear();
           _confirmPasswordController.clear();
+          _confirmNewPasswordController.clear();
           _emailController.clear();
         });
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => AutoPostScreen(
-              apiKey: ApiConfig.geminiApiKey,
-              imageApiKey: ApiConfig.imageApiKey,
-              currentUser: userToOpen,
-            ),
-          ),
-        );
       } else {
         scaffoldMessenger.showSnackBar(
           const SnackBar(

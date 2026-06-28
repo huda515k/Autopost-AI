@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5, // Updated to 5 for notifications table
+      version: 6, // Updated to 6 for twitter/X social link
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -108,9 +108,11 @@ class DatabaseHelper {
       CREATE TABLE social_media_links (
         username TEXT PRIMARY KEY,
         instagram TEXT,
+        twitter TEXT,
         linkedin TEXT,
         facebook TEXT,
         instagram_public INTEGER NOT NULL DEFAULT 1,
+        twitter_public INTEGER NOT NULL DEFAULT 1,
         linkedin_public INTEGER NOT NULL DEFAULT 1,
         facebook_public INTEGER NOT NULL DEFAULT 1,
         updated_at TEXT NOT NULL,
@@ -160,6 +162,20 @@ class DatabaseHelper {
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 6) {
+      // Add the X/Twitter columns to social_media_links.
+      try {
+        await db.execute('ALTER TABLE social_media_links ADD COLUMN twitter TEXT');
+      } catch (e) {
+        debugPrint('twitter column may already exist: $e');
+      }
+      try {
+        await db.execute(
+            'ALTER TABLE social_media_links ADD COLUMN twitter_public INTEGER NOT NULL DEFAULT 1');
+      } catch (e) {
+        debugPrint('twitter_public column may already exist: $e');
+      }
+    }
     if (oldVersion < 5) {
       // Create notifications table
       await db.execute('''
