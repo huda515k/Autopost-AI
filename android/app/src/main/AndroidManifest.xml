@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for the app to reach the network (image generation, AI, backend posting). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="autopost_ai"
         android:name="${applicationName}"

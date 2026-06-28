@@ -10,16 +10,7 @@ class SocialMediaService {
       final db = await DatabaseHelper.instance.database;
       await db.insert(
         'social_media_links',
-        {
-          'username': links.username,
-          'instagram': links.instagram,
-          'linkedin': links.linkedin,
-          'facebook': links.facebook,
-          'instagram_public': links.instagramPublic ? 1 : 0,
-          'linkedin_public': links.linkedinPublic ? 1 : 0,
-          'facebook_public': links.facebookPublic ? 1 : 0,
-          'updated_at': links.updatedAt.toIso8601String(),
-        },
+        links.toJson(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       return true;
@@ -48,9 +39,11 @@ class SocialMediaService {
       return SocialMediaLinks(
         username: row['username'] as String,
         instagram: (row['instagram_public'] as int? ?? 1) == 1 ? row['instagram'] as String? : null,
+        twitter: (row['twitter_public'] as int? ?? 1) == 1 ? row['twitter'] as String? : null,
         linkedin: (row['linkedin_public'] as int? ?? 1) == 1 ? row['linkedin'] as String? : null,
         facebook: (row['facebook_public'] as int? ?? 1) == 1 ? row['facebook'] as String? : null,
         instagramPublic: (row['instagram_public'] as int? ?? 1) == 1,
+        twitterPublic: (row['twitter_public'] as int? ?? 1) == 1,
         linkedinPublic: (row['linkedin_public'] as int? ?? 1) == 1,
         facebookPublic: (row['facebook_public'] as int? ?? 1) == 1,
         updatedAt: DateTime.parse(row['updated_at'] as String),
