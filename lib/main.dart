@@ -1,7 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:autopost_ai/services/db_platform.dart';
 import 'package:autopost_ai/auth_screen.dart';
 import 'package:autopost_ai/autopost_screen.dart';
 import 'package:autopost_ai/config/api_config.dart';
@@ -14,12 +12,9 @@ import 'package:autopost_ai/services/theme_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Use the FFI SQLite backend on desktop platforms (sqflite has no native
-  // plugin for macOS/Windows/Linux).
-  if (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  // Pick the right SQLite backend for this platform (web: IndexedDB,
+  // desktop: FFI, mobile: default plugin).
+  configureDatabaseFactory();
 
   // Initialize theme service
   await ThemeService.instance.initialize();

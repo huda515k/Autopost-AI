@@ -36,6 +36,7 @@ dependencies:
   http: ^1.1.0  # For API calls to image generation services
   sqflite: ^2.3.0  # SQLite database for user and post storage
   sqflite_common_ffi: ^2.3.0  # SQLite FFI backend for desktop (macOS/Windows/Linux)
+  sqflite_common_ffi_web: ^0.4.0  # SQLite (IndexedDB) backend for web
   path: ^1.8.3  # For database file paths
   path_provider: ^2.1.5  # For local file handling when sharing images
   crypto: ^3.0.3  # For password hashing
